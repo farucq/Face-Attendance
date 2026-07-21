@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Face Attendance{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1 class="page-title">Dashboard</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <h3 id="total-registered">0</h3>
+                <p>Registered Users</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+                <h3 id="present-today">0</h3>
+                <p>Present Today</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <h3 id="total-records">0</h3>
+                <p>Total Records</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="attendance-section">
+        <div class="camera-container">
+            <h2>Live Camera</h2>
+            <div class="camera-wrapper">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="overlay"></canvas>
+            </div>
+            <div class="camera-controls">
+                <button id="start-camera" class="btn btn-primary">Start Camera</button>
+                <button id="stop-camera" class="btn btn-secondary" disabled>Stop Camera</button>
+                <button id="capture" class="btn btn-success" disabled>Mark Attendance</button>
+            </div>
+        </div>
+        
+        <div class="recognized-faces">
+            <h2>Recognized Faces</h2>
+            <div id="faces-list" class="faces-list">
+                <p class="empty-state">Start the camera to recognize faces</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="today-attendance">
+        <h2>Today's Attendance</h2>
+        <div id="today-list" class="attendance-list">
+            <p class="empty-state">Loading...</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadTodayAttendance();
+    
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('start-camera');
+    const stopBtn = document.getElementById('stop-camera');
+    const captureBtn = document.getElementById('capture');
+    let stream = null;
+    
+    startBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            captureBtn.disabled = false;
+        } catch (err) {
+            alert('Error accessing camera: ' + err.message);
+        }
+    });
+    
+    stopBtn.addEventListener('click', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            captureBtn.disabled = true;
+        }
+    });
+    
+    captureBtn.addEventListener('click', async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+        const formData = new FormData();
+        formData.append('image', blob, 'capture.jpg');
+        
+        try {
+            const response = await fetch('/api/recognize', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            displayFaces(data.faces);
+            loadStats();
+            loadTodayAttendance();
+        } catch (err) {
+            alert('Error recognizing faces: ' + err.message);
+        }
+    });
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        document.getElementById('total-registered').textContent = data.total_registered;
+        document.getElementById('present-today').textContent = data.present_today;
+        document.getElementById('total-records').textContent = data.total_records;
+    } catch (err) {
+        console.error('Error loading stats:', err);
+    }
+}
+
+async function loadTodayAttendance() {
+    try {
+        const response = await fetch('/api/attendance/today');
+        const data = await response.json();
+        const list = document.getElementById('today-list');
+        
+        if (data.length === 0) {
+            list.innerHTML = '<p class="empty-state">No attendance recorded today</p>';
+            return;
+        }
+        
+        list.innerHTML = data.map(record => `
+            <div class="attendance-item">
+                <span class="name">${record.name}</span>
+                <span class="id">${record.id}</span>
+                <span class="time">${record.timestamp.split(' ')[1]}</span>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Error loading attendance:', err);
+    }
+}
+
+function displayFaces(faces) {
+    const list = document.getElementById('faces-list');
+    
+    if (faces.length === 0) {
+        list.innerHTML = '<p class="empty-state">No faces detected</p>';
+        return;
+    }
+    
+    list.innerHTML = faces.map(face => `
+        <div class="face-item ${face.name === 'Unknown' ? 'unknown' : 'recognized'}">
+            <span class="face-name">${face.name}</span>
+            <span class="face-id">${face.id}</span>
+            <span class="face-confidence">${(face.confidence * 100).toFixed(1)}%</span>
+        </div>
+    `).join('');
+}
+</script>
+{% endblock %}

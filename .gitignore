@@ -1,0 +1,9 @@
+node_modules/
+data/
+*.pem
+public/faces/*.jpg
+public/faces/*.png
+public/faces/*.jpeg
+__pycache__/
+.env
+*.pyc

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Face Attendance{% endblock %}
+
+{% block content %}
+<div class="register-page">
+    <h1 class="page-title">Register New User</h1>
+    
+    <div class="register-container">
+        <div class="register-form-section">
+            <form id="register-form" class="register-form">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="id">Employee/Student ID</label>
+                    <input type="text" id="id" name="id" required placeholder="Enter ID">
+                </div>
+                
+                <div class="form-group">
+                    <label>Photo</label>
+                    <div class="photo-upload">
+                        <input type="file" id="image" name="image" accept="image/*" required hidden>
+                        <div class="upload-area" id="upload-area">
+                            <span class="upload-icon">📷</span>
+                            <p>Click to upload photo</p>
+                            <p class="upload-hint">JPG format, face clearly visible</p>
+                        </div>
+                        <img id="preview" class="photo-preview" style="display: none;">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Register User</button>
+            </form>
+        </div>
+        
+        <div class="register-instructions">
+            <h2>Instructions</h2>
+            <ul>
+                <li>Ensure the face is clearly visible</li>
+                <li>Use a well-lit environment</li>
+                <li>Look directly at the camera</li>
+                <li>Remove glasses if possible</li>
+                <li>One face per photo</li>
+            </ul>
+            
+            <div class="tips-box">
+                <h3>Tips for Best Results</h3>
+                <ul>
+                    <li>Use a passport-style photo</li>
+                    <li>Neutral expression works best</li>
+                    <li>Avoid shadows on face</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="registered-users">
+        <h2>Registered Users</h2>
+        <div id="users-list" class="users-list">
+            <p class="empty-state">Loading...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadRegisteredUsers();
+    
+    const uploadArea = document.getElementById('upload-area');
+    const imageInput = document.getElementById('image');
+    const preview = document.getElementById('preview');
+    
+    uploadArea.addEventListener('click', () => imageInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        imageInput.files = e.dataTransfer.files;
+        showPreview(e.dataTransfer.files[0]);
+    });
+    
+    imageInput.addEventListener('change', (e) => {
+        showPreview(e.target.files[0]);
+    });
+    
+    function showPreview(file) {
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                uploadArea.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        
+        try {
+            const response = await fetch('/register', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                e.target.reset();
+                preview.style.display = 'none';
+                uploadArea.style.display = 'flex';
+                loadRegisteredUsers();
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            alert('Error registering user: ' + err.message);
+        }
+    });
+});
+
+async function loadRegisteredUsers() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        const list = document.getElementById('users-list');
+        
+        if (data.total_registered === 0) {
+            list.innerHTML = '<p class="empty-state">No users registered yet</p>';
+            return;
+        }
+        
+        list.innerHTML = `
+            <div class="user-count">
+                <span class="count-number">${data.total_registered}</span>
+                <span class="count-label">users registered</span>
+            </div>
+        `;
+    } catch (err) {
+        console.error('Error loading users:', err);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance History - Face Attendance{% endblock %}
+
+{% block content %}
+<div class="attendance-page">
+    <h1 class="page-title">Attendance History</h1>
+    
+    <div class="filters">
+        <div class="filter-group">
+            <label for="date-filter">Filter by Date</label>
+            <input type="date" id="date-filter">
+        </div>
+        <div class="filter-group">
+            <label for="search">Search</label>
+            <input type="text" id="search" placeholder="Search by name or ID">
+        </div>
+        <button id="clear-filters" class="btn btn-secondary">Clear Filters</button>
+    </div>
+    
+    <div class="attendance-table-container">
+        <table class="attendance-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="attendance-body">
+                <tr>
+                    <td colspan="4" class="empty-state">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="export-section">
+        <button id="export-csv" class="btn btn-primary">Export to CSV</button>
+        <button id="export-pdf" class="btn btn-secondary">Export to PDF</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allRecords = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAttendance();
+    
+    document.getElementById('date-filter').addEventListener('change', applyFilters);
+    document.getElementById('search').addEventListener('input', applyFilters);
+    document.getElementById('clear-filters').addEventListener('click', clearFilters);
+    document.getElementById('export-csv').addEventListener('click', exportCSV);
+});
+
+async function loadAttendance() {
+    try {
+        const response = await fetch('/attendance');
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const script = doc.querySelector('script');
+        
+        const history = {{ history|tojson }};
+        allRecords = history;
+        displayRecords(history);
+    } catch (err) {
+        console.error('Error loading attendance:', err);
+    }
+}
+
+function displayRecords(records) {
+    const tbody = document.getElementById('attendance-body');
+    
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No records found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = records.map(record => `
+        <tr>
+            <td>${record.timestamp}</td>
+            <td>${record.name}</td>
+            <td>${record.id}</td>
+            <td><span class="status-badge">${record.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+function applyFilters() {
+    const dateFilter = document.getElementById('date-filter').value;
+    const searchFilter = document.getElementById('search').value.toLowerCase();
+    
+    let filtered = allRecords;
+    
+    if (dateFilter) {
+        filtered = filtered.filter(r => r.timestamp.startsWith(dateFilter));
+    }
+    
+    if (searchFilter) {
+        filtered = filtered.filter(r => 
+            r.name.toLowerCase().includes(searchFilter) || 
+            r.id.toLowerCase().includes(searchFilter)
+        );
+    }
+    
+    displayRecords(filtered);
+}
+
+function clearFilters() {
+    document.getElementById('date-filter').value = '';
+    document.getElementById('search').value = '';
+    displayRecords(allRecords);
+}
+
+function exportCSV() {
+    const headers = ['Timestamp', 'Name', 'ID', 'Status'];
+    const rows = allRecords.map(r => [r.timestamp, r.name, r.id, r.status]);
+    
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+</script>
+{% endblock %}

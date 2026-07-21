@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - FaceTrack</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" fill="currentColor"/>
+                <path d="M15 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" fill="currentColor"/>
+                <path d="M7 4a5 5 0 0 1 10 0v1a5 5 0 0 1-10 0V4z"/>
+                <path d="M3 21h18"/>
+                <path d="M5 21V19a7 7 0 0 1 14 0v2"/>
+            </svg>
+            <span class="brand-name">FaceTrack</span>
+        </div>
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Dashboard
+            </a>
+            <a href="/register" class="nav-link active">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                Register
+            </a>
+            <a href="/attendance" class="nav-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Attendance
+            </a>
+        </div>
+    </nav>
+
+    <nav class="mobile-bottom-nav">
+        <a href="/" class="nav-link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+        <a href="/register" class="nav-link active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            Register
+        </a>
+        <a href="/attendance" class="nav-link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Attendance
+        </a>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">Register New User</h1>
+            <p class="page-subtitle">Capture a face photo to register a new user</p>
+        </div>
+
+        <div class="register-layout">
+            <div class="register-form-card">
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="user-name">Full Name</label>
+                        <input type="text" id="user-name" name="name" placeholder="e.g. John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-id">Employee / Student ID</label>
+                        <input type="text" id="user-id" name="id" placeholder="e.g. EMP001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Face Photo</label>
+                        <div class="photo-capture-area">
+                            <div id="photo-preview-container" class="photo-preview-container">
+                                <img id="photo-preview" class="photo-preview" style="display:none">
+                                <div id="photo-placeholder" class="photo-placeholder">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    <p>No photo captured</p>
+                                </div>
+                            </div>
+                            <input type="file" id="photo-input" name="image" accept="image/*" hidden>
+                            <input type="hidden" id="photo-data" name="photoData">
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-register" class="btn btn-primary btn-block" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                        Register User
+                    </button>
+                </form>
+            </div>
+
+            <div class="capture-card">
+                <div class="section-header">
+                    <h2>Capture Photo</h2>
+                </div>
+                <div class="camera-container">
+                    <video id="reg-video" autoplay muted playsinline></video>
+                    <canvas id="reg-overlay"></canvas>
+                    <div class="camera-placeholder" id="reg-placeholder">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <p>Start camera to capture</p>
+                    </div>
+                </div>
+                <div class="camera-controls">
+                    <button id="btn-reg-start" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Start
+                    </button>
+                    <button id="btn-capture" class="btn btn-success" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Capture
+                    </button>
+                    <button id="btn-retake" class="btn btn-secondary" style="display:none">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Retake
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="registered-users-card">
+            <div class="section-header">
+                <h2>Registered Users</h2>
+                <span class="badge" id="user-count">0</span>
+            </div>
+            <div id="users-grid" class="users-grid">
+                <div class="empty-state">
+                    <p>No users registered yet</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/js/face-api.js"></script>
+    <script src="/js/register.js"></script>
+    <script>
+    document.getElementById('nav-toggle').addEventListener('click', function() {
+        document.getElementById('nav-links').classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+        var nav = document.getElementById('nav-links');
+        var toggle = document.getElementById('nav-toggle');
+        if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+            nav.classList.remove('open');
+        }
+    });
+    </script>
+</body>
+</html>
