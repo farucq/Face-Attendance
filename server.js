@@ -1,6 +1,5 @@
 const express = require('express');
 const http = require('http');
-const https = require('https');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -9,25 +8,15 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const keyPath = path.join(__dirname, 'private-key.pem');
-const certPath = path.join(__dirname, 'certificate.pem');
-const useSSL = fs.existsSync(keyPath) && fs.existsSync(certPath);
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_STATIC_URL;
 
-let sslOptions;
-if (useSSL) {
-  sslOptions = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath)
-  };
-}
+const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
-app.use(express.static('public'));
-app.use('/models', express.static('models'));
 
 const DATA_DIR = path.join(__dirname, 'data');
-const FACES_DIR = path.join(__dirname, 'public', 'faces');
+const FACES_DIR = path.join(__dirname, 'data', 'faces');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance.json');
 
@@ -52,25 +41,13 @@ function saveJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'register.html'));
-});
-
-app.get('/attendance', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'attendance.html'));
-});
-
 app.post('/api/register', upload.single('image'), (req, res) => {
-  const { name, id: userId, descriptor } = req.body;
+  const { name, id: userId, descriptor, descriptors } = req.body;
   if (!name || !userId || !req.file) {
     return res.status(400).json({ error: 'Name, ID, and photo are required' });
   }
 
-  if (!descriptor) {
+  if (!descriptor && !descriptors) {
     fs.unlinkSync(req.file.path);
     return res.status(400).json({ error: 'Face descriptor is required. Ensure your face is visible.' });
   }
@@ -82,9 +59,16 @@ app.post('/api/register', upload.single('image'), (req, res) => {
     return res.status(400).json({ error: 'User ID already exists' });
   }
 
-  let parsedDescriptor;
+  let parsedDescriptors = [];
   try {
-    parsedDescriptor = JSON.parse(descriptor);
+    if (descriptors) {
+      parsedDescriptors = JSON.parse(descriptors);
+      if (!Array.isArray(parsedDescriptors) || parsedDescriptors.length === 0) {
+        throw new Error('No valid descriptors');
+      }
+    } else {
+      parsedDescriptors = [JSON.parse(descriptor)];
+    }
   } catch (e) {
     fs.unlinkSync(req.file.path);
     return res.status(400).json({ error: 'Invalid face descriptor' });
@@ -93,14 +77,15 @@ app.post('/api/register', upload.single('image'), (req, res) => {
   const user = {
     id: userId,
     name,
-    photo: `/faces/${req.file.filename}`,
-    descriptor: parsedDescriptor,
+    photo: `/api/faces/${req.file.filename}`,
+    descriptors: parsedDescriptors,
+    descriptor: parsedDescriptors[0],
     registeredAt: new Date().toISOString()
   };
 
   users.push(user);
   saveJSON(USERS_FILE, users);
-  res.json({ success: true, message: `${name} registered successfully`, user });
+  res.json({ success: true, message: `${name} registered successfully (${parsedDescriptors.length} samples)`, user });
 });
 
 app.get('/api/users', (req, res) => {
@@ -177,12 +162,21 @@ app.get('/api/export/csv', (req, res) => {
   res.send(csv);
 });
 
-if (useSSL) {
-  https.createServer(sslOptions, app).listen(PORT, '0.0.0.0', () => {
-    console.log(`Face Attendance System running at https://0.0.0.0:${PORT}`);
+app.use('/api/faces', express.static(FACES_DIR));
+app.use('/models', express.static(path.join(__dirname, 'models')));
+
+if (isProduction && fs.existsSync(CLIENT_DIST)) {
+  app.use(express.static(CLIENT_DIST));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(CLIENT_DIST, 'index.html'));
   });
 } else {
-  http.createServer(app).listen(PORT, '0.0.0.0', () => {
-    console.log(`Face Attendance System running at http://0.0.0.0:${PORT}`);
-  });
+  app.use(express.static('public'));
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+  app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
+  app.get('/attendance', (req, res) => res.sendFile(path.join(__dirname, 'public', 'attendance.html')));
 }
+
+http.createServer(app).listen(PORT, '0.0.0.0', () => {
+  console.log(`FaceTrack running at http://0.0.0.0:${PORT} [${isProduction ? 'production' : 'development'}]`);
+});

@@ -1,9 +1,9 @@
 node_modules/
+client/node_modules/
+client/dist/
 data/
 *.pem
-public/faces/*.jpg
-public/faces/*.png
-public/faces/*.jpeg
 __pycache__/
 .env
 *.pyc
+*.log
