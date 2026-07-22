@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: facetrack
+    runtime: node
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/stats
+    autoDeploy: true
