@@ -3,22 +3,60 @@ const http = require('http');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('FATAL: MONGODB_URI environment variable is not set');
+  process.exit(1);
+}
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_STATIC_URL;
-
 const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
+mongoose.connect(MONGODB_URI, {
+  bufferCommands: false,
+  serverSelectionTimeoutMS: 5000
+}).then(() => {
+  console.log('MongoDB connected');
+}).catch(err => {
+  console.error('MongoDB connection error:', err.message);
+  process.exit(1);
+});
+
+mongoose.connection.on('error', err => {
+  console.error('MongoDB runtime error:', err.message);
+});
+
+const userSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  photo: { type: String },
+  descriptors: { type: Array, default: [] },
+  descriptor: { type: Array, default: [] },
+  registeredAt: { type: Date, default: Date.now }
+});
+
+const attendanceSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  userId: { type: String, required: true },
+  name: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  status: { type: String, default: 'Present' }
+});
+
+const User = mongoose.model('User', userSchema);
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+
 const DATA_DIR = path.join(__dirname, 'data');
 const FACES_DIR = path.join(__dirname, 'data', 'faces');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance.json');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(FACES_DIR)) fs.mkdirSync(FACES_DIR, { recursive: true });
@@ -32,134 +70,170 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-function loadJSON(file, fallback) {
-  if (!fs.existsSync(file)) return fallback;
-  return JSON.parse(fs.readFileSync(file, 'utf-8'));
-}
-
-function saveJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-app.post('/api/register', upload.single('image'), (req, res) => {
-  const { name, id: userId, descriptor, descriptors } = req.body;
-  if (!name || !userId || !req.file) {
-    return res.status(400).json({ error: 'Name, ID, and photo are required' });
-  }
-
-  if (!descriptor && !descriptors) {
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Face descriptor is required. Ensure your face is visible.' });
-  }
-
-  const users = loadJSON(USERS_FILE, []);
-  const exists = users.find(u => u.id === userId);
-  if (exists) {
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'User ID already exists' });
-  }
-
-  let parsedDescriptors = [];
+app.post('/api/register', upload.single('image'), async (req, res) => {
   try {
-    if (descriptors) {
-      parsedDescriptors = JSON.parse(descriptors);
-      if (!Array.isArray(parsedDescriptors) || parsedDescriptors.length === 0) {
-        throw new Error('No valid descriptors');
-      }
-    } else {
-      parsedDescriptors = [JSON.parse(descriptor)];
+    const { name, id: userId, descriptor, descriptors } = req.body;
+    if (!name || !userId || !req.file) {
+      return res.status(400).json({ error: 'Name, ID, and photo are required' });
     }
-  } catch (e) {
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Invalid face descriptor' });
+
+    if (!descriptor && !descriptors) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Face descriptor is required. Ensure your face is visible.' });
+    }
+
+    const exists = await User.findOne({ id: userId });
+    if (exists) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'User ID already exists' });
+    }
+
+    let parsedDescriptors = [];
+    try {
+      if (descriptors) {
+        parsedDescriptors = JSON.parse(descriptors);
+        if (!Array.isArray(parsedDescriptors) || parsedDescriptors.length === 0) {
+          throw new Error('No valid descriptors');
+        }
+      } else {
+        parsedDescriptors = [JSON.parse(descriptor)];
+      }
+    } catch (e) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Invalid face descriptor' });
+    }
+
+    const user = await User.create({
+      id: userId,
+      name,
+      photo: `/api/faces/${req.file.filename}`,
+      descriptors: parsedDescriptors,
+      descriptor: parsedDescriptors[0],
+      registeredAt: new Date()
+    });
+
+    res.json({ success: true, message: `${name} registered successfully (${parsedDescriptors.length} samples)`, user });
+  } catch (err) {
+    console.error('Register error:', err.message);
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: 'Registration failed' });
   }
-
-  const user = {
-    id: userId,
-    name,
-    photo: `/api/faces/${req.file.filename}`,
-    descriptors: parsedDescriptors,
-    descriptor: parsedDescriptors[0],
-    registeredAt: new Date().toISOString()
-  };
-
-  users.push(user);
-  saveJSON(USERS_FILE, users);
-  res.json({ success: true, message: `${name} registered successfully (${parsedDescriptors.length} samples)`, user });
 });
 
-app.get('/api/users', (req, res) => {
-  const users = loadJSON(USERS_FILE, []);
-  res.json(users);
-});
-
-app.post('/api/attendance/mark', (req, res) => {
-  const { userId, name } = req.body;
-  if (!userId || !name) {
-    return res.status(400).json({ error: 'userId and name are required' });
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find().sort({ registeredAt: -1 }).lean();
+    res.json(users);
+  } catch (err) {
+    console.error('Fetch users error:', err.message);
+    res.json([]);
   }
+});
 
-  const records = loadJSON(ATTENDANCE_FILE, []);
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
+app.post('/api/attendance/mark', async (req, res) => {
+  try {
+    const { userId, name } = req.body;
+    if (!userId || !name) {
+      return res.status(400).json({ error: 'userId and name are required' });
+    }
 
-  const alreadyMarked = records.find(
-    r => r.userId === userId && r.timestamp.startsWith(today)
-  );
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
 
-  if (alreadyMarked) {
-    return res.json({ success: true, message: `${name} already marked present today`, alreadyMarked: true });
+    const alreadyMarked = await Attendance.findOne({
+      userId,
+      timestamp: { $gte: todayStart, $lt: todayEnd }
+    });
+
+    if (alreadyMarked) {
+      return res.json({ success: true, message: `${name} already marked present today`, alreadyMarked: true });
+    }
+
+    const record = await Attendance.create({
+      id: uuidv4(),
+      userId,
+      name,
+      timestamp: new Date(),
+      status: 'Present'
+    });
+
+    res.json({ success: true, message: `Attendance marked for ${name}`, record });
+  } catch (err) {
+    console.error('Mark attendance error:', err.message);
+    res.status(500).json({ error: 'Failed to mark attendance' });
   }
-
-  const record = {
-    id: uuidv4(),
-    userId,
-    name,
-    timestamp: now.toISOString(),
-    status: 'Present'
-  };
-
-  records.push(record);
-  saveJSON(ATTENDANCE_FILE, records);
-  res.json({ success: true, message: `Attendance marked for ${name}`, record });
 });
 
-app.get('/api/attendance', (req, res) => {
-  const records = loadJSON(ATTENDANCE_FILE, []);
-  res.json(records.reverse());
+app.get('/api/attendance', async (req, res) => {
+  try {
+    const records = await Attendance.find().sort({ timestamp: -1 }).lean();
+    res.json(records);
+  } catch (err) {
+    console.error('Fetch attendance error:', err.message);
+    res.json([]);
+  }
 });
 
-app.get('/api/attendance/today', (req, res) => {
-  const records = loadJSON(ATTENDANCE_FILE, []);
-  const today = new Date().toISOString().split('T')[0];
-  const todayRecords = records.filter(r => r.timestamp.startsWith(today));
-  res.json(todayRecords.reverse());
+app.get('/api/attendance/today', async (req, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    const records = await Attendance.find({
+      timestamp: { $gte: todayStart, $lt: todayEnd }
+    }).sort({ timestamp: -1 }).lean();
+
+    res.json(records);
+  } catch (err) {
+    console.error('Fetch today attendance error:', err.message);
+    res.json([]);
+  }
 });
 
-app.get('/api/stats', (req, res) => {
-  const users = loadJSON(USERS_FILE, []);
-  const records = loadJSON(ATTENDANCE_FILE, []);
-  const today = new Date().toISOString().split('T')[0];
-  const todayRecords = records.filter(r => r.timestamp.startsWith(today));
-  const presentToday = new Set(todayRecords.map(r => r.userId));
+app.get('/api/stats', async (req, res) => {
+  try {
+    const totalRegistered = await User.countDocuments();
+    const totalRecords = await Attendance.countDocuments();
 
-  res.json({
-    totalRegistered: users.length,
-    presentToday: presentToday.size,
-    totalRecords: records.length
-  });
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    const todayUserIds = await Attendance.find({
+      timestamp: { $gte: todayStart, $lt: todayEnd }
+    }).distinct('userId');
+
+    res.json({
+      totalRegistered,
+      presentToday: todayUserIds.length,
+      totalRecords
+    });
+  } catch (err) {
+    console.error('Stats error:', err.message);
+    res.json({ totalRegistered: 0, presentToday: 0, totalRecords: 0 });
+  }
 });
 
-app.get('/api/export/csv', (req, res) => {
-  const records = loadJSON(ATTENDANCE_FILE, []);
-  let csv = 'Timestamp,Name,User ID,Status\n';
-  records.forEach(r => {
-    csv += `${r.timestamp},${r.name},${r.userId},${r.status}\n`;
-  });
+app.get('/api/export/csv', async (req, res) => {
+  try {
+    const records = await Attendance.find().sort({ timestamp: -1 }).lean();
+    let csv = 'Timestamp,Name,User ID,Status\n';
+    records.forEach(r => {
+      csv += `${new Date(r.timestamp).toISOString()},${r.name},${r.userId},${r.status}\n`;
+    });
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename=attendance_${new Date().toISOString().split('T')[0]}.csv`);
-  res.send(csv);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance_${new Date().toISOString().split('T')[0]}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Export CSV error:', err.message);
+    res.status(500).send('Export failed');
+  }
 });
 
 app.use('/api/faces', express.static(FACES_DIR));
