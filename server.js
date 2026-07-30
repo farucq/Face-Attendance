@@ -24,8 +24,14 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 mongoose.connect(MONGODB_URI, {
   bufferCommands: false,
   serverSelectionTimeoutMS: 5000
-}).then(() => {
+}).then(async () => {
   console.log('MongoDB connected');
+  try {
+    await mongoose.connection.db.collection('users').dropIndex('email_1');
+    console.log('Dropped stale email_1 index');
+  } catch (e) {
+    if (e.code !== 27) console.error('Index cleanup:', e.message);
+  }
 }).catch(err => {
   console.error('MongoDB connection error:', err.message);
   process.exit(1);
