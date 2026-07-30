@@ -51,11 +51,14 @@ export default function Dashboard() {
     intervalRef.current = setInterval(async () => {
       if (video.paused || video.ended) return
 
-      const detections = await window.faceapi
+      let detectionChain = window.faceapi
         .detectAllFaces(video, getDetector())
         .withFaceLandmarks()
         .withFaceDescriptors()
-        .withAgeAndGender()
+      if (window.faceapi.nets.ageGenderNet.isLoaded) {
+        detectionChain = detectionChain.withAgeAndGender()
+      }
+      const detections = await detectionChain
 
       const displaySize = { width: video.videoWidth, height: video.videoHeight }
       const resized = window.faceapi.resizeResults(detections, displaySize)

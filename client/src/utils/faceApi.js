@@ -15,13 +15,17 @@ export async function loadModels() {
     await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
     await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
     await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    await window.faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
     modelsLoaded = true
-    return true
   } catch (err) {
     console.error('Model load error:', err)
     return false
   }
+  try {
+    await window.faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+  } catch {
+    console.warn('Age/gender model not loaded — feature unavailable')
+  }
+  return true
 }
 
 export function getDetector() {

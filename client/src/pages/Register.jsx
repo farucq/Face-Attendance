@@ -147,15 +147,17 @@ export default function Register() {
         }
 
         ctx2d.drawImage(video, 0, 0)
-        try {
-          const ageGender = await window.faceapi
-            .detectSingleFace(canvas, new window.faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-            .withAgeAndGender()
-          if (ageGender) {
-            setAge(Math.round(ageGender.age))
-            setGender(ageGender.gender === 'male' ? 'Male' : 'Female')
-          }
-        } catch {}
+        if (window.faceapi.nets.ageGenderNet.isLoaded) {
+          try {
+            const ageGender = await window.faceapi
+              .detectSingleFace(canvas, new window.faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+              .withAgeAndGender()
+            if (ageGender) {
+              setAge(Math.round(ageGender.age))
+              setGender(ageGender.gender === 'male' ? 'Male' : 'Female')
+            }
+          } catch {}
+        }
 
         canvas.toBlob((blob) => {
           capturedBlobRef.current = blob
