@@ -54,20 +54,17 @@
 
     <main class="container">
         <div class="page-header">
-            <h1 class="page-title">Register New User</h1>
+            <h1 class="page-title" id="page-title">Register New User</h1>
             <p class="page-subtitle">Capture a face photo to register a new user</p>
         </div>
 
         <div class="register-layout">
             <div class="register-form-card">
                 <form id="register-form">
+                    <div id="match-banner-container"></div>
                     <div class="form-group">
                         <label for="user-name">Full Name</label>
                         <input type="text" id="user-name" name="name" placeholder="e.g. John Doe" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="user-id">Employee / Student ID</label>
-                        <input type="text" id="user-id" name="id" placeholder="e.g. EMP001" required>
                     </div>
                     <div class="form-group">
                         <label>Face Photo</label>
@@ -83,10 +80,13 @@
                             <input type="hidden" id="photo-data" name="photoData">
                         </div>
                     </div>
-                    <button type="submit" id="btn-register" class="btn btn-primary btn-block" disabled>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                        Register User
-                    </button>
+                    <div class="form-actions">
+                        <button type="submit" id="btn-register" class="btn btn-primary" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                            Register
+                        </button>
+                        <button type="button" id="btn-cancel-update" class="btn btn-secondary" style="display:none">Cancel</button>
+                    </div>
                 </form>
             </div>
 

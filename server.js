@@ -87,6 +87,49 @@ const upload = multer({
   }
 });
 
+function euclideanDistance(a, b) {
+  if (a.length !== b.length) return Infinity;
+  return Math.sqrt(a.reduce((sum, val, i) => sum + (val - b[i]) ** 2, 0));
+}
+
+async function findMatchingUser(descriptor) {
+  const users = await User.find({
+    $or: [
+      { descriptors: { $exists: true, $not: { $size: 0 } } },
+      { descriptor: { $exists: true, $not: { $size: 0 } } }
+    ]
+  }).lean();
+  const THRESHOLD = 0.5;
+  let bestMatch = null;
+  let bestDist = THRESHOLD;
+  for (const user of users) {
+    const samples = user.descriptors && user.descriptors.length > 0
+      ? user.descriptors
+      : user.descriptor
+        ? [user.descriptor]
+        : [];
+    for (const sample of samples) {
+      if (!Array.isArray(sample) || sample.length !== 128) continue;
+      const dist = euclideanDistance(descriptor, sample);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestMatch = user;
+      }
+    }
+  }
+  return bestMatch;
+}
+
+async function getNextEmpId() {
+  const lastUser = await User.findOne().sort({ registeredAt: -1 }).lean();
+  let nextNum = 1;
+  if (lastUser && lastUser.id) {
+    const m = lastUser.id.match(/EMP(\d+)/i);
+    if (m) nextNum = parseInt(m[1], 10) + 1;
+  }
+  return `EMP${String(nextNum).padStart(2, '0')}`;
+}
+
 app.post('/api/register', (req, res, next) => {
   upload.single('image')(req, res, (err) => {
     if (err) {
@@ -99,20 +142,9 @@ app.post('/api/register', (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    const { name, id: userId, descriptor, descriptors } = req.body;
-    if (!name || !userId || !req.file) {
-      return res.status(400).json({ error: 'Name, ID, and photo are required' });
-    }
-
-    if (!descriptor && !descriptors) {
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: 'Face descriptor is required. Ensure your face is visible.' });
-    }
-
-    const exists = await User.findOne({ id: userId });
-    if (exists) {
-      fs.unlinkSync(req.file.path);
-      return res.status(400).json({ error: 'User ID already exists' });
+    const { name, descriptor, descriptors } = req.body;
+    if (!name || !req.file) {
+      return res.status(400).json({ error: 'Name and photo are required' });
     }
 
     let parsedDescriptors = [];
@@ -137,8 +169,19 @@ app.post('/api/register', (req, res, next) => {
       return res.status(400).json({ error: 'Invalid face descriptor' });
     }
 
+    const match = await findMatchingUser(parsedDescriptors[0]);
+    if (match) {
+      fs.unlinkSync(req.file.path);
+      return res.json({
+        matched: true,
+        user: { id: match.id, name: match.name, photo: match.photo, registeredAt: match.registeredAt }
+      });
+    }
+
+    const newId = await getNextEmpId();
+
     const user = await User.create({
-      id: userId,
+      id: newId,
       name,
       photo: `/api/faces/${req.file.filename}`,
       descriptors: parsedDescriptors,
@@ -146,11 +189,73 @@ app.post('/api/register', (req, res, next) => {
       registeredAt: new Date()
     });
 
-    res.json({ success: true, message: `${name} registered successfully (${parsedDescriptors.length} samples)`, user });
+    res.json({ success: true, message: `${name} registered as ${newId}`, user });
   } catch (err) {
     console.error('Register error:', err);
     if (req.file) fs.unlinkSync(req.file.path);
     res.status(500).json({ error: `Registration failed: ${err.message}` });
+  }
+});
+
+app.put('/api/users/:id', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError || err.message?.includes('Only JPEG')) {
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const existing = await User.findOne({ id: req.params.id });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+
+    const { name, descriptor, descriptors } = req.body;
+    const updateData = {};
+    if (name) updateData.name = name;
+
+    let parsedDescriptors = [];
+    try {
+      if (descriptors) {
+        parsedDescriptors = JSON.parse(descriptors);
+      } else if (descriptor) {
+        const single = JSON.parse(descriptor);
+        if (!Array.isArray(single)) throw new Error('Invalid');
+        parsedDescriptors = [single];
+      }
+      for (const d of parsedDescriptors) {
+        if (!Array.isArray(d) || d.length !== 128) throw new Error('Invalid');
+      }
+      if (parsedDescriptors.length > 0) {
+        updateData.descriptors = parsedDescriptors;
+        updateData.descriptor = parsedDescriptors[0];
+      }
+    } catch (e) {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Invalid face descriptor' });
+      }
+    }
+
+    if (req.file) {
+      if (existing.photo) {
+        const oldPath = path.join(FACES_DIR, path.basename(existing.photo));
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      updateData.photo = `/api/faces/${req.file.filename}`;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+
+    const updated = await User.findOneAndUpdate({ id: req.params.id }, updateData, { new: true }).lean();
+    res.json({ success: true, message: `${updated.name} updated successfully`, user: updated });
+  } catch (err) {
+    console.error('Update error:', err);
+    if (req.file) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: 'Update failed' });
   }
 });
 
