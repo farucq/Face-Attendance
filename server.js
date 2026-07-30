@@ -259,6 +259,24 @@ app.put('/api/users/:id', (req, res, next) => {
   }
 });
 
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findOne({ id: req.params.id });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.photo) {
+      const photoPath = path.join(FACES_DIR, path.basename(user.photo));
+      if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
+    }
+
+    await User.deleteOne({ id: req.params.id });
+    res.json({ success: true, message: `${user.name} deleted successfully` });
+  } catch (err) {
+    console.error('Delete error:', err.message);
+    res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
 app.get('/api/users', async (req, res) => {
   try {
     const users = await User.find().sort({ registeredAt: -1 }).lean();

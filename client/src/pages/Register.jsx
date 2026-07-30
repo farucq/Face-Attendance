@@ -14,6 +14,7 @@ export default function Register() {
   const [name, setName] = useState('')
   const [captureCount, setCaptureCount] = useState(0)
   const [isCapturing, setIsCapturing] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
 
   const videoRef = useRef(null)
   const overlayRef = useRef(null)
@@ -165,14 +166,71 @@ export default function Register() {
     setCaptureCount(0)
   }
 
+  const cancelEdit = () => {
+    setEditingUser(null)
+    setName('')
+    retake()
+  }
+
+  const startEdit = (user) => {
+    setEditingUser(user)
+    setName(user.name)
+    retake()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDelete = async (user) => {
+    if (!window.confirm(`Delete ${user.name} (${user.id})? This cannot be undone.`)) return
+    try {
+      const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        showToast(data.message, 'success')
+        loadUsers()
+        if (editingUser?.id === user.id) cancelEdit()
+      } else {
+        showToast(data.error, 'error')
+      }
+    } catch (err) {
+      showToast(err.message || 'Delete failed', 'error')
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!capturedBlobRef.current) return showToast('Please capture a photo first', 'error')
+
+    if (!capturedBlobRef.current && !editingUser) return showToast('Please capture a photo first', 'error')
     const trimmedName = name.trim()
     if (!trimmedName) return showToast('Fill in name', 'error')
-    if (capturedDescriptorsRef.current.length === 0) return showToast('No face descriptor. Retake the photo.', 'error')
+    if (!editingUser && capturedDescriptorsRef.current.length === 0) return showToast('No face descriptor. Retake the photo.', 'error')
 
     setSubmitting(true)
+
+    if (editingUser) {
+      const formData = new FormData()
+      formData.append('name', trimmedName)
+      if (capturedBlobRef.current) {
+        formData.append('image', capturedBlobRef.current, 'face.jpg')
+        formData.append('descriptors', JSON.stringify(capturedDescriptorsRef.current))
+      }
+      try {
+        const res = await fetch(`/api/users/${editingUser.id}`, { method: 'PUT', body: formData })
+        const data = await res.json()
+        if (data.success) {
+          showToast(data.message, 'success')
+          cancelEdit()
+          loadUsers()
+        } else {
+          showToast(data.error, 'error')
+        }
+      } catch (err) {
+        showToast(err.message || 'Update failed', 'error')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
     const formData = new FormData()
     formData.append('name', trimmedName)
     formData.append('image', capturedBlobRef.current, 'face.jpg')
@@ -203,8 +261,8 @@ export default function Register() {
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Register New User</h1>
-        <p className="page-subtitle">Capture multiple face samples for accurate recognition</p>
+        <h1 className="page-title">{editingUser ? 'Update User' : 'Register New User'}</h1>
+        <p className="page-subtitle">{editingUser ? `Editing ${editingUser.name} (${editingUser.id})` : 'Capture multiple face samples for accurate recognition'}</p>
       </div>
 
       <div className="register-layout">
@@ -215,7 +273,7 @@ export default function Register() {
               <input type="text" id="user-name" placeholder="e.g. John Doe" required value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="form-group">
-              <label>Face Photo ({captureCount}/{SAMPLES_NEEDED} samples)</label>
+              <label>Face Photo {editingUser && '(optional — leave as-is to keep existing)'} {!editingUser && `(${captureCount}/${SAMPLES_NEEDED} samples)`}</label>
               <div className="photo-capture-area">
                 <div className="photo-preview-container">
                   {previewUrl ? (
@@ -223,15 +281,20 @@ export default function Register() {
                   ) : (
                     <div className="photo-placeholder">
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      <p>No photo captured</p>
+                      <p>{editingUser ? 'No new photo (existing kept)' : 'No photo captured'}</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <button type="submit" className="btn btn-primary btn-block" disabled={!captured || submitting}>
-              {submitting ? 'Registering...' : 'Register'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={(!captured && !editingUser) || submitting}>
+                {submitting ? 'Saving...' : editingUser ? 'Update User' : 'Register'}
+              </button>
+              {editingUser && (
+                <button type="button" className="btn btn-secondary" onClick={cancelEdit}>Cancel</button>
+              )}
+            </div>
           </form>
         </div>
 
@@ -304,6 +367,14 @@ export default function Register() {
                 <div className="user-card-info">
                   <div className="user-card-name">{u.name}</div>
                   <div className="user-card-id">{u.id}</div>
+                </div>
+                <div className="user-card-actions">
+                  <button className="btn-icon btn-icon-edit" title="Edit" onClick={() => startEdit(u)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button className="btn-icon btn-icon-delete" title="Delete" onClick={() => handleDelete(u)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
                 </div>
               </div>
               );

@@ -617,6 +617,7 @@ body {
     background: var(--surface);
     border-radius: var(--radius-xs);
     box-shadow: var(--shadow-light-sm), var(--shadow-dark-sm);
+    position: relative;
 }
 
 .user-card img {
@@ -642,6 +643,47 @@ body {
 .user-card-id {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+.user-card-actions {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.user-card:hover .user-card-actions {
+    opacity: 1;
+}
+
+.btn-icon {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: var(--surface);
+    box-shadow: var(--shadow-light-sm), var(--shadow-dark-sm);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+}
+
+.btn-icon:hover {
+    box-shadow: var(--shadow-light), var(--shadow-dark);
+}
+
+.btn-icon-edit:hover {
+    color: #4f46e5;
+}
+
+.btn-icon-delete:hover {
+    color: #dc3545;
 }
 
 /* Attendance Page */
