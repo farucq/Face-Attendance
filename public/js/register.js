@@ -5,9 +5,6 @@ let capturedDescriptor = null;
 let regDetectInterval = null;
 let modelsReady = false;
 
-let matchedUser = null;
-let updating = false;
-
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -15,30 +12,6 @@ function showToast(message, type = 'info') {
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3500);
-}
-
-function updateUIState() {
-    const title = document.getElementById('page-title');
-    const btn = document.getElementById('btn-register');
-    const cancelBtn = document.getElementById('btn-cancel-update');
-    const banner = document.getElementById('match-banner-container');
-
-    if (updating && matchedUser) {
-        title.textContent = `Update ${matchedUser.id}`;
-        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg> Update ${matchedUser.id}`;
-        btn.className = 'btn btn-success';
-        cancelBtn.style.display = 'inline-flex';
-        banner.innerHTML = `<div class="match-banner">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Face matches <strong>${matchedUser.name}</strong> (${matchedUser.id})
-        </div>`;
-    } else {
-        title.textContent = 'Register New User';
-        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> Register`;
-        btn.className = 'btn btn-primary';
-        cancelBtn.style.display = 'none';
-        banner.innerHTML = '';
-    }
 }
 
 async function ensureModels() {
@@ -174,26 +147,10 @@ document.getElementById('btn-retake').addEventListener('click', () => {
     document.getElementById('btn-reg-start').disabled = false;
 });
 
-function resetForm() {
-    capturedBlob = null;
-    capturedDescriptor = null;
-    matchedUser = null;
-    updating = false;
-    document.getElementById('photo-preview').style.display = 'none';
-    document.getElementById('photo-placeholder').style.display = 'flex';
-    document.getElementById('btn-register').disabled = true;
-    document.getElementById('btn-capture').style.display = 'inline-flex';
-    document.getElementById('btn-retake').style.display = 'none';
-    document.getElementById('btn-reg-start').disabled = false;
-    document.getElementById('user-name').value = '';
-    updateUIState();
-}
-
-/* Register / Update */
+/* Register */
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!capturedBlob) return showToast('Please capture a photo first', 'error');
-    if (updating && !matchedUser) return showToast('No user to update', 'error');
 
     const name = document.getElementById('user-name').value.trim();
     if (!name) return showToast('Fill in name', 'error');
@@ -205,39 +162,37 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     formData.append('descriptor', JSON.stringify(capturedDescriptor));
 
     try {
-        let res, data;
-
-        if (updating && matchedUser) {
-            res = await fetch('/api/users/' + matchedUser.id, { method: 'PUT', body: formData });
-            data = await res.json();
-        } else {
-            res = await fetch('/api/register', { method: 'POST', body: formData });
-            data = await res.json();
-        }
-
+        const res = await fetch('/api/register', { method: 'POST', body: formData });
+        const data = await res.json();
         if (data.success) {
             showToast(data.message, 'success');
-            resetForm();
+            e.target.reset();
+            capturedBlob = null;
+            capturedDescriptor = null;
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('photo-placeholder').style.display = 'flex';
+            document.getElementById('btn-register').disabled = true;
+            document.getElementById('btn-capture').style.display = 'inline-flex';
+            document.getElementById('btn-retake').style.display = 'none';
+            document.getElementById('btn-reg-start').disabled = false;
             loadUsers();
         } else if (data.matched) {
-            matchedUser = data.user;
-            updating = true;
-            document.getElementById('user-name').value = matchedUser.name;
-            updateUIState();
-            showToast('Face matches ' + matchedUser.name + ' (' + matchedUser.id + ')', 'info');
+            showToast('Already registered: ' + data.user.name + ' (' + data.user.id + '). Duplicate not allowed.', 'error');
+            e.target.reset();
+            capturedBlob = null;
+            capturedDescriptor = null;
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('photo-placeholder').style.display = 'flex';
+            document.getElementById('btn-register').disabled = true;
+            document.getElementById('btn-capture').style.display = 'inline-flex';
+            document.getElementById('btn-retake').style.display = 'none';
+            document.getElementById('btn-reg-start').disabled = false;
         } else {
             showToast(data.error, 'error');
         }
     } catch (err) {
-        showToast(err.message || 'Operation failed', 'error');
+        showToast(err.message || 'Registration failed', 'error');
     }
-});
-
-document.getElementById('btn-cancel-update').addEventListener('click', () => {
-    matchedUser = null;
-    updating = false;
-    document.getElementById('user-name').value = '';
-    resetForm();
 });
 
 async function loadUsers() {

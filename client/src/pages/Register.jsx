@@ -15,9 +15,6 @@ export default function Register() {
   const [captureCount, setCaptureCount] = useState(0)
   const [isCapturing, setIsCapturing] = useState(false)
 
-  const [matchedUser, setMatchedUser] = useState(null)
-  const [updating, setUpdating] = useState(false)
-
   const videoRef = useRef(null)
   const overlayRef = useRef(null)
   const streamRef = useRef(null)
@@ -166,14 +163,11 @@ export default function Register() {
     setPreviewUrl(null)
     setCaptured(false)
     setCaptureCount(0)
-    setMatchedUser(null)
-    setUpdating(false)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!capturedBlobRef.current) return showToast('Please capture a photo first', 'error')
-    if (updating && !matchedUser) return showToast('No user to update', 'error')
     const trimmedName = name.trim()
     if (!trimmedName) return showToast('Fill in name', 'error')
     if (capturedDescriptorsRef.current.length === 0) return showToast('No face descriptor. Retake the photo.', 'error')
@@ -185,68 +179,39 @@ export default function Register() {
     formData.append('descriptors', JSON.stringify(capturedDescriptorsRef.current))
 
     try {
-      if (updating && matchedUser) {
-        const res = await fetch(`/api/users/${matchedUser.id}`, { method: 'PUT', body: formData })
-        const data = await res.json()
-        if (data.success) {
-          showToast(data.message, 'success')
-          setName('')
-          retake()
-          loadUsers()
-        } else {
-          showToast(data.error, 'error')
-        }
+      const res = await fetch('/api/register', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.success) {
+        showToast(data.message, 'success')
+        setName('')
+        retake()
+        loadUsers()
+      } else if (data.matched) {
+        showToast(`Already registered: ${data.user.name} (${data.user.id}). Duplicate not allowed.`, 'error')
+        setName('')
+        retake()
       } else {
-        const res = await fetch('/api/register', { method: 'POST', body: formData })
-        const data = await res.json()
-        if (data.success) {
-          showToast(data.message, 'success')
-          setName('')
-          retake()
-          loadUsers()
-        } else if (data.matched) {
-          setMatchedUser(data.user)
-          setUpdating(true)
-          setName(data.user.name)
-          showToast(`Face matches ${data.user.name} (${data.user.id})`, 'info')
-        } else {
-          showToast(data.error, 'error')
-        }
+        showToast(data.error, 'error')
       }
     } catch (err) {
-      showToast(err.message || 'Operation failed', 'error')
+      showToast(err.message || 'Registration failed', 'error')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const cancelUpdate = () => {
-    setMatchedUser(null)
-    setUpdating(false)
-    setName('')
-    retake()
-  }
-
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">{updating ? `Update ${matchedUser?.id}` : 'Register New User'}</h1>
-        <p className="page-subtitle">{updating ? 'Update name and/or face photo' : 'Capture multiple face samples for accurate recognition'}</p>
+        <h1 className="page-title">Register New User</h1>
+        <p className="page-subtitle">Capture multiple face samples for accurate recognition</p>
       </div>
 
       <div className="register-layout">
         <div className="register-form-card">
           <form onSubmit={handleSubmit}>
-            {matchedUser && (
-              <div className="form-group">
-                <div className="match-banner">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <span>Face matches <strong>{matchedUser.name}</strong> ({matchedUser.id})</span>
-                </div>
-              </div>
-            )}
             <div className="form-group">
-              <label htmlFor="user-name">{updating ? 'Update Name' : 'Full Name'}</label>
+              <label htmlFor="user-name">Full Name</label>
               <input type="text" id="user-name" placeholder="e.g. John Doe" required value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="form-group">
@@ -264,22 +229,15 @@ export default function Register() {
                 </div>
               </div>
             </div>
-            <div className="form-actions">
-              <button type="submit" className={`btn ${updating ? 'btn-success' : 'btn-primary'}`} disabled={!captured || submitting} style={{ flex: 1 }}>
-                {submitting ? (updating ? 'Updating...' : 'Registering...') : (updating ? `Update ${matchedUser?.id}` : 'Register')}
-              </button>
-              {updating && (
-                <button type="button" className="btn btn-secondary" onClick={cancelUpdate}>
-                  Cancel
-                </button>
-              )}
-            </div>
+            <button type="submit" className="btn btn-primary btn-block" disabled={!captured || submitting}>
+              {submitting ? 'Registering...' : 'Register'}
+            </button>
           </form>
         </div>
 
         <div className="capture-card">
           <div className="section-header">
-            <h2>{updating ? 'Recapture Photo' : 'Capture Photo'}</h2>
+            <h2>Capture Photo</h2>
             {isCapturing && <span className="badge">{captureCount}/{SAMPLES_NEEDED}</span>}
           </div>
           <div className="camera-container">
