@@ -599,25 +599,6 @@ body {
     font-size: 0.8125rem;
 }
 
-.match-banner {
-    background: #efe3c7;
-    color: #7a6a2a;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-xs);
-    font-weight: 600;
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    box-shadow: var(--shadow-light-sm), var(--shadow-dark-sm);
-}
-
-.form-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
 .registered-users-card {
     margin-top: 0;
 }
