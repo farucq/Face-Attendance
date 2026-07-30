@@ -145,11 +145,17 @@ function matchFace(descriptor) {
     let bestDist = 0.6;
 
     for (const user of users) {
-        if (!user.descriptor) continue;
-        const dist = faceapi.euclideanDistance(descriptor, new Float32Array(user.descriptor));
-        if (dist < bestDist) {
-            bestDist = dist;
-            bestMatch = user;
+        const samples = user.descriptors && user.descriptors.length > 0
+            ? user.descriptors
+            : user.descriptor
+                ? [user.descriptor]
+                : [];
+        for (const sample of samples) {
+            const dist = faceapi.euclideanDistance(descriptor, new Float32Array(sample));
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestMatch = user;
+            }
         }
     }
     return bestMatch;

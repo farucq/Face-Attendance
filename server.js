@@ -68,9 +68,30 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}${ext}`);
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    }
+  }
+});
 
-app.post('/api/register', upload.single('image'), async (req, res) => {
+app.post('/api/register', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError || err.message?.includes('Only JPEG')) {
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(500).json({ error: 'Upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { name, id: userId, descriptor, descriptors } = req.body;
     if (!name || !userId || !req.file) {
@@ -92,11 +113,18 @@ app.post('/api/register', upload.single('image'), async (req, res) => {
     try {
       if (descriptors) {
         parsedDescriptors = JSON.parse(descriptors);
-        if (!Array.isArray(parsedDescriptors) || parsedDescriptors.length === 0) {
-          throw new Error('No valid descriptors');
+      } else if (descriptor) {
+        const single = JSON.parse(descriptor);
+        if (!Array.isArray(single)) throw new Error('Invalid descriptor');
+        parsedDescriptors = [single];
+      }
+      if (!Array.isArray(parsedDescriptors) || parsedDescriptors.length === 0) {
+        throw new Error('No valid descriptors');
+      }
+      for (const d of parsedDescriptors) {
+        if (!Array.isArray(d) || d.length !== 128) {
+          throw new Error('Invalid descriptor format');
         }
-      } else {
-        parsedDescriptors = [JSON.parse(descriptor)];
       }
     } catch (e) {
       fs.unlinkSync(req.file.path);
@@ -114,9 +142,9 @@ app.post('/api/register', upload.single('image'), async (req, res) => {
 
     res.json({ success: true, message: `${name} registered successfully (${parsedDescriptors.length} samples)`, user });
   } catch (err) {
-    console.error('Register error:', err.message);
+    console.error('Register error:', err);
     if (req.file) fs.unlinkSync(req.file.path);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: `Registration failed: ${err.message}` });
   }
 });
 

@@ -182,7 +182,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
             showToast(data.error, 'error');
         }
     } catch (err) {
-        showToast('Registration failed', 'error');
+        showToast(err.message || 'Registration failed', 'error');
     }
 });
 
@@ -198,15 +198,20 @@ async function loadUsers() {
         return;
     }
 
-    grid.innerHTML = users.map(u => `
+    grid.innerHTML = users.map(u => {
+        const photoSrc = u.photo
+            ? u.photo.startsWith('/api/') ? u.photo : `/api${u.photo}`
+            : '';
+        return `
         <div class="user-card">
-            <img src="${u.photo}" alt="${u.name}">
+            <img src="${photoSrc}" alt="${u.name}" onerror="this.style.display='none'">
             <div class="user-card-info">
                 <div class="user-card-name">${u.name}</div>
                 <div class="user-card-id">${u.id}</div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', loadUsers);

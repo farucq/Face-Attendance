@@ -193,8 +193,8 @@ export default function Register() {
       } else {
         showToast(data.error, 'error')
       }
-    } catch {
-      showToast('Registration failed', 'error')
+    } catch (err) {
+      showToast(err.message || 'Registration failed', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -299,15 +299,20 @@ export default function Register() {
           {users.length === 0 ? (
             <div className="empty-state"><p>No users registered yet</p></div>
           ) : (
-            users.map(u => (
+            users.map(u => {
+              const photoSrc = u.photo
+                ? u.photo.startsWith('/api/') ? u.photo : `/api${u.photo}`
+                : '';
+              return (
               <div key={u.id} className="user-card">
-                <img src={u.photo} alt={u.name} />
+                <img src={photoSrc} alt={u.name} onError={e => e.target.style.display = 'none'} />
                 <div className="user-card-info">
                   <div className="user-card-name">{u.name}</div>
                   <div className="user-card-id">{u.id}</div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
