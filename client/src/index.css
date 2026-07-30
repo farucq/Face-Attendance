@@ -5,33 +5,51 @@
 }
 
 :root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #eef2ff;
-    --secondary: #64748b;
-    --success: #10b981;
-    --success-light: #ecfdf5;
-    --danger: #ef4444;
-    --danger-light: #fef2f2;
-    --warning: #f59e0b;
-    --bg: #f1f5f9;
-    --surface: #ffffff;
-    --text: #0f172a;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
-    --border: #e2e8f0;
-    --border-light: #f1f5f9;
-    --radius: 12px;
-    --radius-sm: 8px;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    --bg-gradient-start: #4a3f2e;
+    --bg-gradient-end: #2c2419;
+    --surface-start: #f5efe6;
+    --surface-end: #e8dfd0;
+    --surface: #f0e8da;
+    --surface-border: #c4b69d;
+    --surface-highlight: rgba(255,255,255,0.7);
+    --surface-shadow: rgba(0,0,0,0.15);
+    --primary-start: #6b4e3b;
+    --primary-end: #4d3527;
+    --primary: #5c4033;
+    --primary-hover-start: #7d5d47;
+    --primary-hover-end: #5c4033;
+    --primary-light: #ddd0c0;
+    --secondary-start: #8a7a6a;
+    --secondary-end: #6b5d4f;
+    --secondary: #7a6b5c;
+    --success-start: #5a8c5a;
+    --success-end: #3d6b3d;
+    --success: #4d7a4d;
+    --success-light: #d4e8d4;
+    --danger-start: #b5453a;
+    --danger-end: #8a332a;
+    --danger: #9e3d33;
+    --danger-light: #f0d4d0;
+    --warning-start: #c49a2b;
+    --warning-end: #9e7a1f;
+    --warning: #b58a25;
+    --text: #2c2419;
+    --text-secondary: #5c4f3e;
+    --text-muted: #8a7a6a;
+    --border: #c4b69d;
+    --border-light: #ddd0c0;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.4);
+    --shadow: 0 4px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+    --shadow-md: 0 6px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+    --shadow-lg: 0 10px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+    --inner-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
 }
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
+    background: linear-gradient(180deg, var(--bg-gradient-start), var(--bg-gradient-end));
     color: var(--text);
     line-height: 1.5;
     min-height: 100vh;
