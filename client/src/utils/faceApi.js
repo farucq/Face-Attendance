@@ -15,6 +15,7 @@ export async function loadModels() {
     await window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
     await window.faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
     await window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    await window.faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
     modelsLoaded = true
     return true
   } catch (err) {

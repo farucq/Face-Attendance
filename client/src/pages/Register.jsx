@@ -95,6 +95,7 @@ export default function Register() {
     }
     if (intervalRef.current) clearInterval(intervalRef.current)
     if (videoRef.current) videoRef.current.srcObject = null
+    if (overlayRef.current) overlayRef.current.getContext('2d').clearRect(0, 0, overlayRef.current.width, overlayRef.current.height)
     setCameraActive(false)
   }
 
@@ -270,7 +271,7 @@ export default function Register() {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="user-name">Full Name</label>
-              <input type="text" id="user-name" placeholder="e.g. John Doe" required value={name} onChange={e => setName(e.target.value)} />
+              <input type="text" id="user-name" placeholder="Farook" required value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="form-group">
               <label>Face Photo {editingUser && '(optional — leave as-is to keep existing)'} {!editingUser && `(${captureCount}/${SAMPLES_NEEDED} samples)`}</label>

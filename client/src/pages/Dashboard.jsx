@@ -55,6 +55,7 @@ export default function Dashboard() {
         .detectAllFaces(video, getDetector())
         .withFaceLandmarks()
         .withFaceDescriptors()
+        .withAgeAndGender()
 
       const displaySize = { width: video.videoWidth, height: video.videoHeight }
       const resized = window.faceapi.resizeResults(detections, displaySize)
@@ -65,19 +66,27 @@ export default function Dashboard() {
         const box = det.detection.box
         const matched = matchFace(det.descriptor, users)
         const confidence = det.detection.score
+        const age = det.age != null ? Math.round(det.age) : null
+        const gender = det.gender || null
 
         ctx.strokeStyle = matched ? '#10b981' : '#f59e0b'
         ctx.lineWidth = 2
         ctx.strokeRect(box.x, box.y, box.width, box.height)
 
         const label = matched ? `${matched.name}` : 'Unknown'
+        const subLabel = [gender, age ? `${age}y` : ''].filter(Boolean).join(', ')
         const confLabel = `${(confidence * 100).toFixed(0)}%`
         ctx.fillStyle = matched ? '#10b981' : '#f59e0b'
-        const textWidth = Math.max(ctx.measureText(label).width, ctx.measureText(confLabel).width) + 12
-        ctx.fillRect(box.x, box.y - 38, textWidth, 38)
+        const boxH = subLabel ? 54 : 38
+        const textWidth = Math.max(ctx.measureText(label).width, subLabel ? ctx.measureText(subLabel).width : 0, ctx.measureText(confLabel).width) + 12
+        ctx.fillRect(box.x, box.y - boxH, textWidth, boxH)
         ctx.fillStyle = '#fff'
         ctx.font = '12px Inter, sans-serif'
-        ctx.fillText(label, box.x + 6, box.y - 22)
+        ctx.fillText(label, box.x + 6, box.y - boxH + 16)
+        if (subLabel) {
+          ctx.font = '10px Inter, sans-serif'
+          ctx.fillText(subLabel, box.x + 6, box.y - boxH + 30)
+        }
         ctx.font = '10px Inter, sans-serif'
         ctx.fillText(confLabel, box.x + 6, box.y - 8)
 
@@ -87,7 +96,7 @@ export default function Dashboard() {
           markAttendance(matched.id, matched.name)
         }
 
-        return { matched, confidence, key: `${matched ? matched.id : 'unknown'}-${box.x.toFixed(0)}-${box.y.toFixed(0)}` }
+        return { matched, confidence, age, gender, key: `${matched ? matched.id : 'unknown'}-${box.x.toFixed(0)}-${box.y.toFixed(0)}` }
       })
 
       setDetectedFaces(faces)
@@ -216,6 +225,10 @@ export default function Dashboard() {
                   <div className="face-details">
                     <div className="face-name">{face.matched ? face.matched.name : 'Unknown'}</div>
                     <div className="face-id">{face.matched ? face.matched.id : 'Not registered'}</div>
+                    <div className="face-meta">
+                      {face.gender && <span>{face.gender === 'male' ? 'Male' : 'Female'}</span>}
+                      {face.age != null && <span> · {Math.round(face.age)}y</span>}
+                    </div>
                   </div>
                   <span className={`face-badge ${face.matched ? 'badge-present' : 'badge-unknown'}`}>
                     {face.matched ? `${(face.confidence * 100).toFixed(0)}%` : 'Unknown'}

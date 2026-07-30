@@ -408,6 +408,12 @@
     color: var(--text-secondary);
 }
 
+.face-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
 .face-time {
     font-size: 0.75rem;
     color: var(--text-muted);
@@ -814,44 +820,95 @@
     box-shadow: var(--shadow-inset-pressed);
 }
 
-/* Mobile Bottom Nav */
-.mobile-bottom-nav {
+/* FAB */
+.fab {
     display: none;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--surface);
-    border-top: none;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.04);
-    z-index: 200;
-    padding: 0.25rem 0 calc(0.25rem + env(safe-area-inset-bottom));
-    justify-content: space-around;
-}
-
-.mobile-bottom-nav .nav-link {
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.6875rem;
-    min-width: 64px;
-    text-align: center;
-    border-radius: var(--radius-xs);
-}
-
-.mobile-bottom-nav .nav-link svg {
-    width: 20px;
-    height: 20px;
-}
-
-.mobile-bottom-nav .nav-link.active {
-    color: #fff;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     background: var(--primary);
-    box-shadow: var(--shadow-light-sm), var(--shadow-dark-sm);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    z-index: 300;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.mobile-bottom-nav .nav-link.active svg {
-    transform: scale(1.1);
+.fab:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+
+.fab:active {
+    transform: scale(0.92);
+}
+
+.fab-icon {
+    transition: transform 0.3s;
+}
+
+.fab-open .fab-icon {
+    transform: rotate(45deg);
+}
+
+.fab-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 250;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.fab-overlay.open {
+    opacity: 1;
+}
+
+.fab-menu {
+    display: none;
+    position: fixed;
+    bottom: calc(1.5rem + 64px);
+    right: 1.5rem;
+    z-index: 260;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.fab-menu .nav-link {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text);
+    box-shadow: var(--shadow-light), var(--shadow-dark);
+    gap: 0.5rem;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+}
+
+.fab-menu.open .nav-link {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.fab-menu.open .nav-link:nth-child(1) { transition-delay: 0.03s; }
+.fab-menu.open .nav-link:nth-child(2) { transition-delay: 0.06s; }
+.fab-menu.open .nav-link:nth-child(3) { transition-delay: 0.09s; }
+
+.fab-menu .nav-link.active {
+    background: var(--primary);
+    color: #fff;
 }
 
 /* Responsive */
@@ -906,7 +963,7 @@
     .toast { max-width: calc(100vw - 2rem); }
     .toast-container { left: 1rem; right: 1rem; bottom: 5rem; }
 
-    .footer { padding-bottom: calc(1.5rem + 60px); }
+    .footer { padding-bottom: 1.5rem; }
 }
 
 @media (max-width: 600px) {
@@ -937,9 +994,11 @@
         min-height: 44px;
     }
 
-    .mobile-bottom-nav { display: flex; }
+    .fab { display: flex; }
+    .fab-menu { display: flex; }
+    .fab-overlay { display: block; }
 
-    .container { padding: 0.75rem; padding-bottom: calc(1rem + 60px); }
+    .container { padding: 0.75rem; padding-bottom: 1rem; }
 
     .page-header { margin-bottom: 1rem; }
     .page-title { font-size: 1.125rem; }
@@ -979,7 +1038,8 @@
     .table-card { border-radius: var(--radius-sm); }
     .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-    .photo-preview-container { aspect-ratio: 1; max-height: 280px; }
+    .photo-capture-area { width: 100%; }
+    .photo-preview-container { width: 100%; aspect-ratio: 1; max-height: 320px; }
 }
 
 @media (max-width: 380px) {
