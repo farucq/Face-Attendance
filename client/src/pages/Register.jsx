@@ -12,6 +12,8 @@ export default function Register() {
   const [previewUrl, setPreviewUrl] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [name, setName] = useState('')
+  const [age, setAge] = useState('')
+  const [gender, setGender] = useState('')
   const [captureCount, setCaptureCount] = useState(0)
   const [isCapturing, setIsCapturing] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
@@ -145,6 +147,16 @@ export default function Register() {
         }
 
         ctx2d.drawImage(video, 0, 0)
+        try {
+          const ageGender = await window.faceapi
+            .detectSingleFace(canvas, new window.faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+            .withAgeAndGender()
+          if (ageGender) {
+            setAge(Math.round(ageGender.age))
+            setGender(ageGender.gender === 'male' ? 'Male' : 'Female')
+          }
+        } catch {}
+
         canvas.toBlob((blob) => {
           capturedBlobRef.current = blob
           setPreviewUrl(URL.createObjectURL(blob))
@@ -170,12 +182,16 @@ export default function Register() {
   const cancelEdit = () => {
     setEditingUser(null)
     setName('')
+    setAge('')
+    setGender('')
     retake()
   }
 
   const startEdit = (user) => {
     setEditingUser(user)
     setName(user.name)
+    setAge(user.age != null ? String(user.age) : '')
+    setGender(user.gender || '')
     retake()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -210,6 +226,8 @@ export default function Register() {
     if (editingUser) {
       const formData = new FormData()
       formData.append('name', trimmedName)
+      if (age) formData.append('age', age)
+      if (gender) formData.append('gender', gender)
       if (capturedBlobRef.current) {
         formData.append('image', capturedBlobRef.current, 'face.jpg')
         formData.append('descriptors', JSON.stringify(capturedDescriptorsRef.current))
@@ -234,6 +252,8 @@ export default function Register() {
 
     const formData = new FormData()
     formData.append('name', trimmedName)
+    if (age) formData.append('age', age)
+    if (gender) formData.append('gender', gender)
     formData.append('image', capturedBlobRef.current, 'face.jpg')
     formData.append('descriptors', JSON.stringify(capturedDescriptorsRef.current))
 
@@ -243,11 +263,15 @@ export default function Register() {
       if (data.success) {
         showToast(data.message, 'success')
         setName('')
+        setAge('')
+        setGender('')
         retake()
         loadUsers()
       } else if (data.matched) {
         showToast(`Already registered: ${data.user.name} (${data.user.id}). Duplicate not allowed.`, 'error')
         setName('')
+        setAge('')
+        setGender('')
         retake()
       } else {
         showToast(data.error, 'error')
@@ -272,6 +296,20 @@ export default function Register() {
             <div className="form-group">
               <label htmlFor="user-name">Full Name</label>
               <input type="text" id="user-name" placeholder="Farook" required value={name} onChange={e => setName(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label htmlFor="user-age">Age</label>
+                <input type="number" id="user-age" placeholder="Auto-detected" min="1" max="120" value={age} onChange={e => setAge(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label htmlFor="user-gender">Gender</label>
+                <select id="user-gender" value={gender} onChange={e => setGender(e.target.value)}>
+                  <option value="">Auto-detected</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
             </div>
             <div className="form-group">
               <label>Face Photo {editingUser && '(optional — leave as-is to keep existing)'} {!editingUser && `(${captureCount}/${SAMPLES_NEEDED} samples)`}</label>
@@ -368,6 +406,7 @@ export default function Register() {
                 <div className="user-card-info">
                   <div className="user-card-name">{u.name}</div>
                   <div className="user-card-id">{u.id}</div>
+                  {(u.age || u.gender) && <div className="user-card-meta">{[u.gender, u.age ? `${u.age}y` : ''].filter(Boolean).join(' · ')}</div>}
                 </div>
                 <div className="user-card-actions">
                   <button className="btn-icon btn-icon-edit" title="Edit" onClick={() => startEdit(u)}>

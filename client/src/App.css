@@ -503,7 +503,9 @@
     color: var(--text);
 }
 
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
     width: 100%;
     padding: 0.75rem 1rem;
     border: none;
@@ -514,14 +516,18 @@
     background: var(--surface);
     box-shadow: inset 3px 3px 8px rgba(0,0,0,0.04), inset -3px -3px 8px rgba(255,255,255,0.3);
     color: var(--text);
+    appearance: auto;
 }
 
-.form-group input[type="text"]:focus {
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group select:focus {
     outline: none;
     box-shadow: inset 3px 3px 8px rgba(0,0,0,0.06), inset -3px -3px 8px rgba(255,255,255,0.2);
 }
 
-.form-group input[type="text"]::placeholder {
+.form-group input[type="text"]::placeholder,
+.form-group input[type="number"]::placeholder {
     color: var(--text-muted);
 }
 
@@ -601,6 +607,12 @@
 .user-card-id {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+.user-card-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
 }
 
 .user-card-actions {
@@ -956,7 +968,9 @@
     .data-table { font-size: 0.8125rem; }
     .data-table th, .data-table td { padding: 0.625rem 0.75rem; }
 
-    .form-group input[type="text"] { min-height: 44px; padding: 0.75rem 0.875rem; font-size: 1rem; }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select { min-height: 44px; padding: 0.75rem 0.875rem; font-size: 1rem; }
 
     .users-grid { grid-template-columns: 1fr; }
 

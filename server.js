@@ -44,6 +44,8 @@ mongoose.connection.on('error', err => {
 const userSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
+  age: { type: Number },
+  gender: { type: String },
   photo: { type: String },
   descriptors: { type: Array, default: [] },
   descriptor: { type: Array, default: [] },
@@ -142,7 +144,7 @@ app.post('/api/register', (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    const { name, descriptor, descriptors } = req.body;
+    const { name, age, gender, descriptor, descriptors } = req.body;
     if (!name || !req.file) {
       return res.status(400).json({ error: 'Name and photo are required' });
     }
@@ -183,6 +185,8 @@ app.post('/api/register', (req, res, next) => {
     const user = await User.create({
       id: newId,
       name,
+      age: age ? Number(age) : undefined,
+      gender: gender || undefined,
       photo: `/api/faces/${req.file.filename}`,
       descriptors: parsedDescriptors,
       descriptor: parsedDescriptors[0],
@@ -212,9 +216,11 @@ app.put('/api/users/:id', (req, res, next) => {
     const existing = await User.findOne({ id: req.params.id });
     if (!existing) return res.status(404).json({ error: 'User not found' });
 
-    const { name, descriptor, descriptors } = req.body;
+    const { name, age, gender, descriptor, descriptors } = req.body;
     const updateData = {};
     if (name) updateData.name = name;
+    if (age) updateData.age = Number(age);
+    if (gender) updateData.gender = gender;
 
     let parsedDescriptors = [];
     try {
