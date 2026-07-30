@@ -3,6 +3,8 @@ client/node_modules/
 client/dist/
 data/
 *.pem
+*.pem.bak
+public/faces/
 __pycache__/
 .env
 *.pyc

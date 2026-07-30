@@ -12,12 +12,11 @@ export default function Navbar() {
     <>
       <nav className="navbar">
         <div className="nav-brand">
-          <svg className="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" fill="currentColor"/>
-            <path d="M15 11.5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" fill="currentColor"/>
-            <path d="M7 4a5 5 0 0 1 10 0v1a5 5 0 0 1-10 0V4z"/>
-            <path d="M3 21h18"/>
-            <path d="M5 21V19a7 7 0 0 1 14 0v2"/>
+          <svg className="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="8"/>
+            <circle cx="9" cy="9.5" r="1.5" fill="currentColor"/>
+            <circle cx="15" cy="9.5" r="1.5" fill="currentColor"/>
+            <path d="M8.5 14a3.5 3.5 0 0 0 7 0"/>
           </svg>
           <span className="brand-name">FaceTrack</span>
         </div>
